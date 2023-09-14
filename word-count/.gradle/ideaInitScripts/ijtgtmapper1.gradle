@@ -1,0 +1,5 @@
+ext.pathMapper = [:]
+ext.pathMapper.put('//wsl\$/ArchLinux/home/xfhuang/.sdkman/candidates/java/11.0.19-zulu/bin/java', '/home/xfhuang/.sdkman/candidates/java/11.0.19-zulu/bin/java')
+ext.pathMapper.put('//wsl\$/ArchLinux/home/xfhuang/workspace/bigdataonk8s/flink-wc', '/home/xfhuang/workspace/bigdataonk8s/flink-wc')
+ext.pathMapper.put("<<target java executable path>>", '/home/xfhuang/.sdkman/candidates/java/11.0.19-zulu/bin/java')
+ext.mapPath = { path -> pathMapper.get(path) ?: path }

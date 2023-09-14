@@ -1,0 +1,127 @@
+buildscript {
+    repositories {
+//        gradlePluginPortal()
+        maven { url 'https://maven.aliyun.com/repository/google' }
+        maven { url 'https://maven.aliyun.com/repository/public/' }
+    }
+    dependencies {
+        classpath 'com.github.johnrengelman:shadow:8.1.1'
+    }
+}
+
+plugins {
+    id 'java'
+    id 'application'
+    // shadow plugin to produce fat JARs
+    id 'com.github.johnrengelman.shadow' version '8.1.1'
+    id 'maven-publish'
+}
+
+// artifact properties
+group = 'com.demo.flink-wc'
+version = '0.1-SNAPSHOT'
+// 根目录的 这个配置必须有，可以不写正确的类
+mainClassName = 'com.bigdataonk8s.StreamWordCount'
+description = """Flink Quickstart Job"""
+
+ext {
+    javaVersion = '11'
+    flinkVersion = '1.15.4'
+    scalaBinaryVersion = '2.12'
+    slf4jVersion = '1.7.7'
+    log4jVersion = '1.2.17'
+}
+
+sourceCompatibility = javaVersion
+targetCompatibility = javaVersion
+tasks.withType(JavaCompile) {
+    options.encoding = 'UTF-8'
+}
+
+applicationDefaultJvmArgs = ["-Dlog4j.configuration=log4j.properties"]
+
+// declare where to find the dependencies of your project
+java {
+    //withJavadocJar() //生成java-doc
+    withSourcesJar() //生成源码，上传后方便查看
+}
+
+jar {
+    enabled = true //生成依赖jar包
+    archiveClassifier = '' //取消原来plain的后缀
+}
+
+repositories {
+    mavenLocal()
+    maven { url 'https://maven.aliyun.com/repository/google' }
+    maven { url 'https://maven.aliyun.com/repository/public/' }
+}
+
+// 注意：我们不能使用 "compileOnly" 或者 "shadow" 配置，这会使我们无法在 IDE 中或通过使用 "gradle run" 命令运行代码。
+// 我们也不能从 shadowJar 中排除传递依赖（请查看 https://github.com/johnrengelman/shadow/issues/159)。
+// -> 显式定义我们想要包含在 "flinkShadowJar" 配置中的类库!
+configurations {
+    flinkShadowJar // dependencies which go into the shadowJar
+
+    // 总是排除这些依赖（也来自传递依赖），因为 Flink 会提供这些依赖。
+    flinkShadowJar.exclude group: 'org.apache.flink', module: 'force-shading'
+    flinkShadowJar.exclude group: 'com.google.code.findbugs', module: 'jsr305'
+    flinkShadowJar.exclude group: 'org.slf4j'
+    flinkShadowJar.exclude group: 'log4j'
+}
+
+// declare the dependencies for your production and test code
+dependencies {
+    // --------------------------------------------------------------
+    // 编译时依赖不应该包含在 shadow jar 中，
+    // 这些依赖会在 Flink 的 lib 目录中提供。
+    // --------------------------------------------------------------
+    shadow  "org.apache.flink:flink-java:${flinkVersion}"
+    shadow  "org.apache.flink:flink-streaming-java:${flinkVersion}"
+    shadow  "org.apache.flink:flink-clients:${flinkVersion}"
+
+    // --------------------------------------------------------------
+    // 应该包含在 shadow jar 中的依赖，例如：连接器。
+    // 它们必须在 flinkShadowJar 的配置中！
+    // --------------------------------------------------------------
+    //flinkShadowJar "org.apache.flink:flink-connector-kafka-0.11_${scalaBinaryVersion}:${flinkVersion}"
+
+    shadow  "log4j:log4j:${log4jVersion}"
+    shadow  "org.slf4j:slf4j-log4j12:${slf4jVersion}"
+}
+
+// make compileOnly dependencies available for tests:
+sourceSets {
+    main.compileClasspath += configurations.flinkShadowJar
+    main.runtimeClasspath += configurations.flinkShadowJar
+
+    test.compileClasspath += configurations.flinkShadowJar
+    test.runtimeClasspath += configurations.flinkShadowJar
+
+    javadoc.classpath += configurations.flinkShadowJar
+}
+
+run.classpath = sourceSets.main.runtimeClasspath
+
+//jar {
+//    manifest {
+//        attributes 'Built-By': System.getProperty('user.name'),
+//                'Build-Jdk': System.getProperty('java.version')
+//    }
+//}
+//
+//shadowJar {
+//    configurations = [project.configurations.flinkShadowJar]
+//}
+task testJar(type: Jar) {
+    manifest {
+        attributes 'Built-By': System.getProperty('user.name'),
+                'Build-Jdk': System.getProperty('java.version')
+    }
+}
+
+shadowJar {
+    manifest {
+        inheritFrom(project.tasks.testJar.manifest)
+    }
+}

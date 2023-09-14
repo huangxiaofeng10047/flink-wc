@@ -1,0 +1,50 @@
+plugins {
+    id 'java'
+    id 'application'
+    // 这里只需要引用，不需要有版本号
+    id 'com.github.johnrengelman.shadow'
+    id 'maven-publish'
+}
+
+group 'com.demo.flink-wc'
+version '0.1-SNAPSHOT'
+// 这里需要指向正确的类
+mainClassName = 'com.bigdataonk8s.StreamWordCount'
+
+java {
+    //withJavadocJar() //生成java-doc
+    withSourcesJar() //生成源码，上传后方便查看
+}
+
+jar {
+    enabled = true //生成依赖jar包
+    archiveClassifier = '' //取消原来plain的后缀
+}
+
+repositories {
+    mavenLocal()
+    maven { url 'https://maven.aliyun.com/repository/google' }
+    maven { url 'https://maven.aliyun.com/repository/public/' }
+}
+
+dependencies {
+    compileOnly group: 'junit', name: 'junit', version: '4.12'
+    // --------------------------------------------------------------
+    // 编译时依赖不应该包含在 shadow jar 中，
+    // 这些依赖会在 Flink 的 lib 目录中提供。
+    // --------------------------------------------------------------
+    implementation "org.apache.flink:flink-java:${flinkVersion}"
+    implementation "org.apache.flink:flink-streaming-java:${flinkVersion}"
+    implementation "org.apache.flink:flink-clients:${flinkVersion}"
+    implementation "org.apache.flink:flink-streaming-scala_${scalaBinaryVersion}:${flinkVersion}"
+    implementation group: 'org.apache.flink', name: 'flink-core', version: '1.15.4'
+
+    // --------------------------------------------------------------
+    // 应该包含在 shadow jar 中的依赖，例如：连接器。
+    // 它们必须在 flinkShadowJar 的配置中！
+    // --------------------------------------------------------------
+    //flinkShadowJar "org.apache.flink:flink-connector-kafka-0.11_${scalaBinaryVersion}:${flinkVersion}"
+
+    implementation "log4j:log4j:${log4jVersion}"
+    implementation "org.slf4j:slf4j-log4j12:${slf4jVersion}"
+}
